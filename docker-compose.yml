@@ -11,7 +11,9 @@ services:
     depends_on:
       # proxy 서비스가 실행된 후에 client 서비스가 실행되도록 설정
       - proxy
-
+    networks:
+      - shopping-network
+ 
   # Proxy 서버 서비스
   proxy:
     build:
@@ -21,3 +23,9 @@ services:
       # 호스트의 5000번 포트를 컨테이너의 5000번 포트와 매핑
       - "5000:5000"
     restart: unless-stopped
+    networks:
+      - shopping-network
+        
+networks:
+  shopping-network:
+    external: true

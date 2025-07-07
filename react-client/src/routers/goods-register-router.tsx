@@ -100,18 +100,22 @@ export const GoodsRegisterRouter = () => {
     const onRegister = async (data: FieldValues) => {
         if (inspectionResult === null) {
             if (!window.confirm('AI 상품 검수를 진행하지 않았습니다. 그대로 등록하시겠습니까?')) {
-                return; 
+                return;
             }
         }
 
         const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, imageFile } = data;
-        
+
         const formData = new FormData();
         formData.append('goodsName', goodsName);
         formData.append('mobileGoodsName', mobileGoodsName);
         formData.append('salesPrice', salesPrice);
         formData.append('buyPrice', buyPrice);
         formData.append('origin', origin);
+
+        // [추가] AI 검수 진행 여부에 따라 'aiCheckYn' 값을 설정합니다.
+        const aiCheckYn = inspectionResult ? 'Y' : 'N';
+        formData.append('aiCheckYn', aiCheckYn);
 
         if (imageFile && imageFile.length > 0) {
             for (let i = 0; i < imageFile.length; i++) {
@@ -124,7 +128,7 @@ export const GoodsRegisterRouter = () => {
             const response = await axios.post(`${proxyUrl}/goods/register`, formData, {
                 withCredentials: true,
             });
-            
+
             if (response.data.success) {
                 alert('상품이 성공적으로 등록되었습니다.');
                 navigate('/goods/list');
@@ -134,7 +138,7 @@ export const GoodsRegisterRouter = () => {
         } catch (error) {
             const axiosError = error as AxiosError<any>;
             if (axiosError.response?.data?.message) {
-                 alert(`오류: ${axiosError.response.data.message}`);
+                alert(`오류: ${axiosError.response.data.message}`);
             } else {
                 console.error('등록 중 에러 발생:', error);
                 alert('등록 중 알 수 없는 오류가 발생했습니다.');

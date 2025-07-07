@@ -8,6 +8,7 @@ export interface Goods {
     origin: string;
     insertAt: string; // 생성일시 (CommonEntity로부터 상속)
     files: FileInfo[];
+    aiCheckYn: string; // AI 검수 여부 (Y, N)
     // CommonEntity의 다른 필드 (insertId, modifiedAt, updateId)는 필요에 따라 추가
     // CommonEntity의 다른 필드 (insertId, modifiedAt, updateId)는 필요에 따라 추가
 }

@@ -47,6 +47,11 @@ export const GoodsRegisterRouter = () => {
         const data = getValues();
         const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, imageFile } = data;
         
+        if (!imageFile || imageFile.length === 0) {
+            alert('AI 검수를 위해 이미지를 먼저 등록해주세요.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('goodsName', goodsName);
         formData.append('mobileGoodsName', mobileGoodsName);

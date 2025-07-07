@@ -129,6 +129,11 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
         const data = getValues();
         const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, imageFile } = data;
         
+        if (!imageFile || imageFile.length === 0) {
+            alert('AI 검수를 위해 이미지를 먼저 등록해주세요.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('goodsId', String(goods.goodsId));
         formData.append('goodsName', goodsName);
@@ -150,18 +155,28 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
         try {
             const response = await axios.post(`${proxyUrl}/goods/inspect`, formData, { withCredentials: true });
             if (response.data.success) {
-                setInspectionResult(response.data.data);
+                const result = response.data.data; // [추가] 결과를 변수에 저장
+                setInspectionResult(result);
+                // [추가] 상품 등록 페이지와 동일하게 alert으로 검수 결과 표시
+                alert(`AI 검수 결과: ${result.approved ? '승인' : '반려'}\n사유: ${result.reason}`);
             } else {
                 alert(response.data.message || '검수에 실패했습니다.');
             }
         } catch (error) {
             const axiosError = error as AxiosError<any>;
-            setInspectionResult({ approved: false, reason: axiosError.response?.data?.message || "알 수 없는 오류" });
-            alert(axiosError.response?.data?.message || '검수 중 오류 발생');
+            if (axiosError.response?.data?.message) {
+                const errorMessage = `오류: ${axiosError.response.data.message}`;
+                setInspectionResult({ approved: false, reason: axiosError.response.data.message });
+                alert(errorMessage);
+            } else {
+                console.error('검수 중 에러 발생:', error);
+                alert('검수 중 알 수 없는 오류가 발생했습니다.');
+            }
         } finally {
             setIsInspecting(false);
         }
     };
+
 
     // [추가] 상품 상세 페이지로 이동하는 핸들러
     const handleNavigateToDetail = () => {

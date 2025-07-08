@@ -129,10 +129,10 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
         const data = getValues();
         const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, imageFile } = data;
         
-        if (!imageFile || imageFile.length === 0) {
-            alert('AI 검수를 위해 이미지를 먼저 등록해주세요.');
-            return;
-        }
+        // if (!imageFile || imageFile.length === 0) {
+        //     alert('AI 검수를 위해 이미지를 먼저 등록해주세요.');
+        //     return;
+        // }
 
         const formData = new FormData();
         formData.append('goodsId', String(goods.goodsId));

@@ -7,11 +7,12 @@ const Navbar = ({ isDarkMode }: { isDarkMode: boolean }) => {
 
   const tabs = [
     { label: "상품관리", path: "/goods/list" },
+    { label: "상품등록", path: "/goods/register" }
   ];
 
-  if(!isLoading && storedUser?.adminYn === "Y") {
-    tabs.push({ label: "상품등록", path: "/goods/register" });
-  }
+  // if(!isLoading && storedUser?.adminYn === "Y") {
+  //   tabs.push({ label: "상품등록", path: "/goods/register" });
+  // }
 
   return (
     <nav

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm, FieldValues } from 'react-hook-form';
+import { useForm, FieldValues, UseFormRegister, FormState, UseFormSetValue, Control } from 'react-hook-form';
 import axios, { AxiosError } from 'axios';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import Navbar from '../components/Navbar';
@@ -13,13 +13,18 @@ import { useNavigate } from 'react-router-dom';
 
 
 
-// --- 상품 수정 모달 컴포넌트 (삭제 기능 추가) ---
+// --- 상품 수정 모달 컴포넌트 ---
 const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Goods | null, isOpen: boolean, onClose: () => void, onUpdateSuccess: () => void }) => {
-    const { register, handleSubmit, watch, setValue, getValues, reset, formState: { errors } } = useForm<FieldValues>();
+    const { register, handleSubmit, watch, setValue, getValues, reset, formState: { errors }, control } = useForm<FieldValues>();
     const [isInspecting, setIsInspecting] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false); // [추가] 삭제 진행 상태
+    const [isDeleting, setIsDeleting] = useState(false);
+    
+    const [representativeImagePreview, setRepresentativeImagePreview] = useState<string | null>(null);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    
+    const [detailContentType, setDetailContentType] = useState<'file' | 'html'>('file');
+    
     const [inspectionResult, setInspectionResult] = useState<{ approved: boolean, reason: string } | null>(null);
     const navigate = useNavigate();
 
@@ -28,56 +33,94 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
 
     useEffect(() => {
         if (goods && isOpen) {
+            const allFiles = goods.files || [];
+            const repImage = allFiles.find(file => file.representativeYn === true);
+            const detailItems = allFiles.filter(file => file.representativeYn !== true);
+            const htmlItem = detailItems.find(file => file.fileType === '2');
+
             reset({
                 goodsName: goods.goodsName,
                 mobileGoodsName: goods.mobileGoodsName,
                 origin: goods.origin,
                 salesPrice: goods.salesPrice,
                 buyPrice: goods.buyPrice,
-                imageFile: null
+                representativeImageFile: null,
+                imageFile: null,
+                imageHtml: htmlItem ? htmlItem.fileName || '' : '',
             });
-            const existingImageUrls = goods.files.map(file => `${proxyUrl}${file.filePath}`);
-            setImagePreviews(existingImageUrls);
+
+            setRepresentativeImagePreview(repImage && repImage.filePath ? `${proxyUrl}${repImage.filePath}` : null);
+
+            if (htmlItem) {
+                setDetailContentType('html');
+                setImagePreviews([]); 
+            } else {
+                setDetailContentType('file');
+                const detailImageFiles = detailItems.filter(file => file.filePath && file.filePath.trim() !== '');
+                setImagePreviews(detailImageFiles.map(file => `${proxyUrl}${file.filePath}`));
+            }
+
         } else {
             reset({});
+            setRepresentativeImagePreview(null);
             setImagePreviews([]);
             setInspectionResult(null);
+            setDetailContentType('file');
         }
     }, [goods, isOpen, reset, proxyUrl]);
     
+    const representativeImageFile = watch('representativeImageFile');
     const imageFile = watch('imageFile');
+
+    useEffect(() => {
+        if (representativeImageFile && representativeImageFile.length > 0) {
+            const newPreview = URL.createObjectURL(representativeImageFile[0] as Blob);
+            setRepresentativeImagePreview(newPreview);
+            return () => URL.revokeObjectURL(newPreview);
+        }
+    }, [representativeImageFile]);
+
     useEffect(() => {
         if (imageFile && imageFile.length > 0) {
             const newPreviews = Array.from(imageFile).map(file => URL.createObjectURL(file as Blob));
             setImagePreviews(newPreviews);
+            setDetailContentType('file');
             return () => newPreviews.forEach(url => URL.revokeObjectURL(url));
-        } else if (goods) {
-            const existingImageUrls = goods.files.map(file => `${proxyUrl}${file.filePath}`);
-            setImagePreviews(existingImageUrls);
         }
-    }, [imageFile, goods, proxyUrl]);
+    }, [imageFile]);
 
     const onUpdate = async (data: FieldValues) => {
         if (!goods) return;
+        
         if (inspectionResult === null) {
             if (!window.confirm('AI 상품 검수를 진행하지 않았습니다. 그대로 수정하시겠습니까?')) {
                 return;
             }
         }
         
-        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, imageFile } = data;
+        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, representativeImageFile, imageFile, imageHtml } = data;
+
         const formData = new FormData();
         formData.append('goodsId', String(goods.goodsId));
         formData.append('goodsName', goodsName);
         formData.append('mobileGoodsName', mobileGoodsName);
-        formData.append('salesPrice', salesPrice);
-        formData.append('buyPrice', buyPrice);
+        formData.append('salesPrice', String(salesPrice));
+        formData.append('buyPrice', String(buyPrice));
         formData.append('origin', origin);
 
-        if (imageFile && imageFile.length > 0) {
+        if (representativeImageFile && representativeImageFile.length > 0) {
+            formData.append('representativeFile', representativeImageFile[0]);
+        }
+
+        // 상세 이미지 타입에 따라 데이터와 imageType을 명확하게 설정
+        if (detailContentType === 'file' && imageFile && imageFile.length > 0) {
             for (let i = 0; i < imageFile.length; i++) {
-                formData.append('files', imageFile[i]);
+                formData.append('files', imageFile[i]); // 서버와 통신하는 필드명 통일 (예: imageFiles)
             }
+            formData.append('imageType', 'file'); // 파일일 경우
+        } else {
+            formData.append('imageHtml', imageHtml);
+            formData.append('imageType', 'html'); // HTML일 경우
         }
 
         setIsUpdating(true);
@@ -92,25 +135,23 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
             }
         } catch (error) {
             console.error(error);
-            alert("수정 중 오류 발생");
+            const axiosError = error as AxiosError<any>;
+            alert(axiosError.response?.data?.message || "수정 중 오류가 발생했습니다.");
         } finally {
             setIsUpdating(false);
         }
     };
     
-    // [추가] 상품 삭제 핸들러
     const handleDelete = async () => {
         if (!goods) return;
-
         if (window.confirm(`정말로 이 상품(ID: ${goods.goodsId})을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
             setIsDeleting(true);
             try {
                 const response = await axios.delete(`${proxyUrl}/goods/${goods.goodsId}`, { withCredentials: true });
-                // 성공 여부를 API 응답에 따라 확인 (응답 형식이 명시되지 않아 status 코드로 판단)
                 if (response.status === 200 || response.status === 204) {
                     alert('상품이 성공적으로 삭제되었습니다.');
-                    onUpdateSuccess(); // 목록 새로고침
-                    onClose();         // 모달 닫기
+                    onUpdateSuccess();
+                    onClose();
                 } else {
                     alert('삭제에 실패했습니다.');
                 }
@@ -127,7 +168,7 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
     const onInspect = async () => {
         if (!goods) return;
         const data = getValues();
-        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, imageFile } = data;
+        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, representativeImageFile,imageFile, imageHtml } = data;
         
         // if (!imageFile || imageFile.length === 0) {
         //     alert('AI 검수를 위해 이미지를 먼저 등록해주세요.');
@@ -143,10 +184,19 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
         formData.append('origin', origin);
         formData.append('isFileNew', 'false');
 
+        if (representativeImageFile && representativeImageFile.length > 0) {
+            formData.append('representativeFile', representativeImageFile[0]);
+        }
+
+        // 새로운 상세 이미지 파일이 업로드 되었을 경우
         if (imageFile && imageFile.length > 0) {
+            formData.append('imageType', 'file');
             for (let i = 0; i < imageFile.length; i++) {
                 formData.append('files', imageFile[i]);
             }
+        } else {
+            formData.append('imageType', 'html');
+            formData.append('imageHtml', imageHtml || ''); // imageHtml 값을 추가
         }
         
         setIsInspecting(true);
@@ -177,8 +227,6 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
         }
     };
 
-
-    // [추가] 상품 상세 페이지로 이동하는 핸들러
     const handleNavigateToDetail = () => {
         if (goods) {
             navigate(`/goods/detail/${goods.goodsId}`);
@@ -189,9 +237,12 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
     if (!isOpen) {
         return null;
     }
-    
+
+    // 로딩 및 비활성화 상태를 나타내는 변수
+    const isProcessing = isInspecting || isUpdating || isDeleting;    
+
     return (
-        <div className="fixed inset-0 flex justify-center items-center p-4 overflow-y-auto" onClick={onClose}>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center p-4 overflow-y-auto" onClick={onClose}>
             <div 
                 className={`w-full max-w-4xl rounded-2xl shadow-xl grid grid-rows-[auto_1fr_auto] overflow-hidden max-h-[90vh] ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}
                 onClick={(e) => e.stopPropagation()}
@@ -212,7 +263,11 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
                             errors={errors}
                             isDarkMode={isDarkMode}
                             imagePreviews={imagePreviews}
+                            representativeImagePreview={representativeImagePreview}
                             setValue={setValue}
+                            control={control}
+                            detailContentType={detailContentType}
+                            setDetailContentType={setDetailContentType}
                         />
                     </form>
                     {inspectionResult && (
@@ -226,48 +281,56 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
                     )}
                 </main>
 
-                {/* --- [수정] 모달 푸터 --- */}
-                <footer className="px-8 py-6 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    {/* [추가] 삭제 버튼 (왼쪽 정렬) */}
-                    <button 
-                        type="button" 
-                        onClick={handleDelete} 
-                        disabled={isInspecting || isUpdating || isDeleting}
-                        className={`inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${ (isInspecting || isUpdating || isDeleting) ? 'bg-gray-400 cursor-not-allowed' : `bg-red-600 hover:bg-red-700 focus:ring-red-500`}`}
-                    >
-                        {isDeleting ? '삭제 중...' : '상품 삭제'}
-                    </button>
+                <footer className="px-8 py-6 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center gap-4">
+                    {/* 왼쪽: 삭제 버튼 */}
+                    <div>
+                        <button 
+                            type="button" 
+                            onClick={handleDelete}
+                            disabled={isProcessing}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors
+                                        text-red-600 bg-red-100 hover:bg-red-200 
+                                        dark:text-red-400 dark:bg-red-900/50 dark:hover:bg-red-900
+                                        disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                            {isDeleting ? '삭제 중...' : '삭제'}
+                        </button>
+                    </div>
+
+                    {/* 오른쪽: 나머지 버튼 그룹 */}
+                    <div className="flex items-center gap-4">
                         <button
                             type="button"
                             onClick={handleNavigateToDetail}
-                            disabled={isInspecting || isUpdating || isDeleting}
-                            className={`inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 border text-base font-medium rounded-lg shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                isDarkMode
-                                    ? 'border-gray-500 text-gray-300 bg-gray-700 hover:bg-gray-600 focus:ring-gray-500'
-                                    : 'border-gray-400 text-gray-700 bg-white hover:bg-gray-100 focus:ring-indigo-500'
-                            } ${(isInspecting || isUpdating || isDeleting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={isProcessing}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors
+                                        text-gray-700 bg-gray-100 hover:bg-gray-200 
+                                        dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600
+                                        disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             상품 상세
-                    </button>
-
-                    {/* 기존 버튼 그룹 (오른쪽 정렬) */}
-                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                        <button 
-                            type="button" 
-                            onClick={onInspect} 
-                            disabled={isInspecting || isUpdating || isDeleting}
-                            className={`inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 border text-base font-medium rounded-lg shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${ isDarkMode ? 'border-indigo-400 text-indigo-300 hover:bg-indigo-400 hover:text-white focus:ring-indigo-300' : 'border-indigo-500 text-indigo-600 bg-white hover:bg-indigo-50 focus:ring-indigo-500' } ${(isInspecting || isUpdating || isDeleting) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            <InspectIcon />
-                            {isInspecting ? '검수 중...' : 'AI 상품 검수'}
                         </button>
-                        <button 
-                            type="submit" 
-                            form="goods-edit-form" 
-                            disabled={isInspecting || isUpdating || isDeleting}
-                            className={`inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${ (isInspecting || isUpdating || isDeleting) ? 'bg-gray-400 cursor-not-allowed' : `bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}`}
+                        <button
+                            type="button"
+                            onClick={onInspect}
+                            disabled={isProcessing}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors
+                                        text-gray-700 bg-gray-100 hover:bg-gray-200 
+                                        dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600
+                                        disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                            {isUpdating ? '수정 중...' : '상품 수정하기'}
+                            {isInspecting ? '검수 중...' : 'AI 검수'}
+                        </button>
+                        <button
+                            type="submit"
+                            form="goods-edit-form"
+                            disabled={isProcessing}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors
+                                        text-white bg-blue-600 hover:bg-blue-700
+                                        dark:bg-blue-500 dark:hover:bg-blue-600
+                                        disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                            {isUpdating ? '수정 중...' : '수정하기'}
                         </button>
                     </div>
                 </footer>
@@ -315,14 +378,12 @@ export const GoodsListRouter = () => {
         setSelectedGoods(null);
     };
 
-    // 모달이 열릴 때 body 스크롤을 막고, 닫힐 때 복원하는 useEffect 추가
     useEffect(() => {
         if (isModalOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
         }
-        // 컴포넌트가 언마운트될 때를 대비하여 cleanup 함수에서 스크롤을 복원합니다.
         return () => {
             document.body.style.overflow = 'unset';
         };
@@ -342,10 +403,10 @@ export const GoodsListRouter = () => {
                 <main>
                     {isLoading ? (
                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                            {Array.from({ length: 8 }).map((_, index) => (
-                                <SkeletonCard key={index} isDarkMode />
-                            ))}
-                        </div>
+                             {Array.from({ length: 8 }).map((_, index) => (
+                                 <SkeletonCard key={index} isDarkMode />
+                             ))}
+                         </div>
                     ) : goodsList.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                             {goodsList.map((goods) => (
@@ -354,12 +415,12 @@ export const GoodsListRouter = () => {
                         </div>
                     ) : (
                          <div className={`text-center py-24 rounded-2xl shadow-sm border border-dashed ${isDarkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-300'}`}>
-                            <svg className="mx-auto h-16 w-16 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c.51 0 .962-.343 1.087-.835l1.838-6.837a1.875 1.875 0 00-1.087-2.162H5.25l-.321-1.203a.75.75 0 00-.75-.621H2.25M16.5 18.75a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM8.25 18.75a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                            </svg>
-                            <h3 className={`mt-4 text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>등록된 상품이 없습니다</h3>
-                            <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>첫 상품을 등록하여 판매를 시작해보세요.</p>
-                        </div>
+                             <svg className="mx-auto h-16 w-16 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c.51 0 .962-.343 1.087-.835l1.838-6.837a1.875 1.875 0 00-1.087-2.162H5.25l-.321-1.203a.75.75 0 00-.75-.621H2.25M16.5 18.75a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM8.25 18.75a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                             </svg>
+                             <h3 className={`mt-4 text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>등록된 상품이 없습니다</h3>
+                             <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>첫 상품을 등록하여 판매를 시작해보세요.</p>
+                         </div>
                     )}
                 </main>
             </div>

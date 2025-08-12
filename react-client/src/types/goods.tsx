@@ -9,12 +9,16 @@ export interface Goods {
     insertAt: string; // 생성일시 (CommonEntity로부터 상속)
     files: FileInfo[];
     aiCheckYn: string; // AI 검수 여부 (Y, N)
+    imageHtml: string;
+    representativeFile: FileInfo;
     // CommonEntity의 다른 필드 (insertId, modifiedAt, updateId)는 필요에 따라 추가
     // CommonEntity의 다른 필드 (insertId, modifiedAt, updateId)는 필요에 따라 추가
 }
 
-interface FileInfo {
+export interface FileInfo {
     filesId: number; // 파일의 고유 ID (BIGSERIAL)
+    representativeYn: boolean; // 대표사진여부
+    fileType: string;
     filePath: string;
     fileName: string;
     goodsId: number;

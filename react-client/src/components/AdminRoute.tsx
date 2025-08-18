@@ -9,7 +9,11 @@ type AdminRouteProps = {
 };
 
 const AdminRoute = ({ children }: AdminRouteProps) => {
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
+
+  if(isLoading) {
+    return <div>Loading...</div>;
+  }
 
   if (!user || user.adminYn !== "Y") {
     return <Navigate to="/404" replace />;

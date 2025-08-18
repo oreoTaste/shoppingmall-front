@@ -8,6 +8,7 @@ import { GoodsRegisterRouter } from './routers/goods-register-router';
 import { GoodsListRouter } from './routers/goods-list-router';
 import AdminRoute from './components/AdminRoute';
 import { GoodsDetailPage } from './routers/goods-detail-router';
+import { ForbiddenWordsRouter } from './routers/forbidden-words-router';
 
 
 const ProtectedRoutes = () => {
@@ -22,6 +23,11 @@ const ProtectedRoutes = () => {
                                              </AdminRoute>}/>
       {/* 3. 상품 상세 페이지 라우트 (동적 ID 사용) */}
       <Route path="/goods/detail/:goodsId" element={<GoodsDetailPage />} />
+
+      {/* 4. 금칙어 라우트 */}
+      <Route path="/forbidden-words" element={<AdminRoute>
+                                                <ForbiddenWordsRouter />
+                                              </AdminRoute>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

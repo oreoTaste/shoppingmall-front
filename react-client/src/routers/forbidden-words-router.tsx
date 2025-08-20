@@ -10,11 +10,11 @@ import { useUser } from '../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { DeleteIcon } from '../components/Icons';
 import { ForbiddenWord } from '../types/forbiddenWord';
+import { CategorySelector } from '../components/CategorySelector'; // 👈 1. CategorySelector 임포트
 
 export const ForbiddenWordsRouter = () => {
-    // Update the form to handle all fields of the ForbiddenWord entity
-    const { register, handleSubmit, reset } = useForm<ForbiddenWord>();
-    // Update state to hold an array of ForbiddenWord objects
+    // 👇 2. react-hook-form에서 setValue를 가져옵니다. CategorySelector에 필요합니다.
+    const { register, handleSubmit, reset, setValue } = useForm<ForbiddenWord>();
     const [forbiddenWords, setForbiddenWords] = useState<ForbiddenWord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -22,6 +22,7 @@ export const ForbiddenWordsRouter = () => {
     const { user } = useUser();
     const proxyUrl = "/api";
     const navigate = useNavigate();
+
 
     const fetchForbiddenWords = async () => {
         setIsLoading(true);
@@ -82,7 +83,6 @@ export const ForbiddenWordsRouter = () => {
             alert(axiosError.response?.data?.message || '삭제 중 알 수 없는 오류가 발생했습니다.');
         }
     };
-
     useEffect(() => {
         if (user && user.adminYn === "Y") {
             fetchForbiddenWords();
@@ -98,7 +98,6 @@ export const ForbiddenWordsRouter = () => {
         return null;
     }
 
-    // Common input styling
     const inputStyle = `w-full px-4 py-2 border rounded-md transition-colors ${isDarkMode
         ? 'bg-gray-700 text-white border-gray-600 focus:ring-blue-500 focus:border-blue-500'
         : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`;
@@ -106,6 +105,7 @@ export const ForbiddenWordsRouter = () => {
     return (
         <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* ... (Navbar, Header 등) ... */}
                 <div className="flex justify-between items-center">
                     <Navbar isDarkMode={isDarkMode} />
                     <DarkButton />
@@ -117,17 +117,35 @@ export const ForbiddenWordsRouter = () => {
                 </header>
 
                 <div className="max-w-4xl mx-auto">
-                    {/* Updated Form with all fields */}
                     <form onSubmit={handleSubmit(onAddWord)} className={`p-8 rounded-2xl shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
                         <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>새 금칙어 추가</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input {...register('lgroup')} placeholder="대분류" className={inputStyle} />
-                            <input {...register('mgroup')} placeholder="중분류" className={inputStyle} />
-                            <input {...register('sgroup')} placeholder="소분류" className={inputStyle} />
-                            <input {...register('dgroup')} placeholder="세분류" className={inputStyle} />
-                            <input {...register('word', { required: true })} placeholder="금칙어 (필수)" className={`${inputStyle} md:col-span-2`} />
-                            <input {...register('reason')} placeholder="사유" className={`${inputStyle} md:col-span-2`} />
+                        
+                        {/* 👇 3. 기존 input들을 CategorySelector로 교체 */}
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className={`text-md font-semibold mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                                    카테고리 지정 (선택)
+                                </h3>
+                                <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    특정 카테고리에만 적용할 경우 선택하세요. 선택하지 않으면 모든 카테고리에 적용됩니다.
+                                </p>
+                                <CategorySelector
+                                    setValue={setValue}
+                                    isDarkMode={isDarkMode}
+                                />
+                                {/* CategorySelector가 form의 상태를 업데이트할 수 있도록 hidden input을 유지합니다. */}
+                                <input type="hidden" {...register('lgroup')} />
+                                <input type="hidden" {...register('mgroup')} />
+                                <input type="hidden" {...register('sgroup')} />
+                                <input type="hidden" {...register('dgroup')} />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input {...register('word', { required: true })} placeholder="금칙어 (필수)" className={`${inputStyle} md:col-span-2`} />
+                                <input {...register('reason')} placeholder="사유" className={`${inputStyle} md:col-span-2`} />
+                            </div>
                         </div>
+
                         <div className="mt-6 text-right">
                             <button type="submit" className="px-6 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
                                 추가
@@ -135,7 +153,7 @@ export const ForbiddenWordsRouter = () => {
                         </div>
                     </form>
 
-                    {/* Updated List to Table */}
+                    {/* ... (금칙어 목록 테이블은 변경 없음) ... */}
                     <div className={`mt-8 rounded-2xl shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} overflow-hidden`}>
                         <h2 className={`text-2xl font-bold p-8 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>등록된 금칙어 목록</h2>
                         {isLoading ? (

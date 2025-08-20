@@ -47,6 +47,14 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
                 representativeImageFile: null,
                 imageFile: null,
                 imageHtml: htmlItem ? htmlItem.fileName || '' : '',
+                lgroup: goods.lgroup,
+                lgroupName: goods.lgroupName,
+                mgroup: goods.mgroup,
+                mgroupName: goods.mgroupName,
+                sgroup: goods.sgroup,
+                sgroupName: goods.sgroupName,
+                dgroup: goods.dgroup,
+                dgroupName: goods.dgroupName
             });
 
             setRepresentativeImagePreview(repImage && repImage.filePath ? `${proxyUrl}${repImage.filePath}` : null);
@@ -98,7 +106,7 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
             }
         }
         
-        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, representativeImageFile, imageFile, imageHtml } = data;
+        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, representativeImageFile, imageFile, imageHtml, lgroup, mgroup, sgroup, dgroup } = data;
 
         const formData = new FormData();
         formData.append('goodsId', String(goods.goodsId));
@@ -107,6 +115,11 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
         formData.append('salesPrice', String(salesPrice));
         formData.append('buyPrice', String(buyPrice));
         formData.append('origin', origin);
+
+        formData.append('lgroup', lgroup);
+        formData.append('mgroup', mgroup);
+        formData.append('sgroup', sgroup);
+        formData.append('dgroup', dgroup);
 
         if (representativeImageFile && representativeImageFile.length > 0) {
             formData.append('representativeFile', representativeImageFile[0]);
@@ -268,6 +281,10 @@ const GoodsEditModal = ({ goods, isOpen, onClose, onUpdateSuccess }: { goods: Go
                             control={control}
                             detailContentType={detailContentType}
                             setDetailContentType={setDetailContentType}
+                            initialLgroup={goods?.lgroup}
+                            initialMgroup={goods?.mgroup}
+                            initialSgroup={goods?.sgroup}
+                            initialDgroup={goods?.dgroup}
                         />
                     </form>
                     {inspectionResult && (

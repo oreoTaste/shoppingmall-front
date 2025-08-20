@@ -1,5 +1,6 @@
 import { FieldError, FieldValues, UseFormRegister, UseFormSetValue, Control, useWatch } from "react-hook-form";
 import { UploadIcon } from "./Icons";
+import { CategorySelector } from "./CategorySelector";
 
 // --- GoodsFormFields 컴포넌트 ---
 interface GoodsFormFieldsProps {
@@ -12,6 +13,10 @@ interface GoodsFormFieldsProps {
     control: Control<FieldValues>;
     detailContentType: 'file' | 'html'; 
     setDetailContentType: (type: 'file' | 'html') => void;
+    initialLgroup?: string;
+    initialMgroup?: string;
+    initialSgroup?: string;
+    initialDgroup?: string;
 }
 
 export const GoodsFormFields = ({
@@ -24,6 +29,10 @@ export const GoodsFormFields = ({
     control,
     detailContentType,
     setDetailContentType,
+    initialLgroup,
+    initialMgroup,
+    initialSgroup,
+    initialDgroup,
 }: GoodsFormFieldsProps) => {
 
     const imageHtmlValue = useWatch({
@@ -74,6 +83,23 @@ export const GoodsFormFields = ({
                 <FormInput name="salesPrice" placeholder="판매 가격" type="number" validationRules={{ required: '판매 가격을 입력해주세요', valueAsNumber: true, min: { value: 0, message: '가격은 0 이상이어야 합니다.'} }} />
                 <FormInput name="buyPrice" placeholder="구매 가격" type="number" validationRules={{ required: '구매 가격을 입력해주세요', valueAsNumber: true, min: { value: 0, message: '가격은 0 이상이어야 합니다.'} }} />
                 <FormInput name="origin" placeholder="원산지" validationRules={{ required: '원산지를 입력해주세요' }} />
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>카테고리 분류</h3>
+                <CategorySelector
+                    setValue={setValue} 
+                    isDarkMode={isDarkMode}
+                    initialLgroup={initialLgroup}
+                    initialMgroup={initialMgroup}
+                    initialSgroup={initialSgroup}
+                    initialDgroup={initialDgroup}                    
+                />
+                {/* react-hook-form이 값을 추적할 수 있도록 숨겨진 input을 추가합니다. */}
+                <input type="hidden" {...register('lgroup')} />
+                <input type="hidden" {...register('mgroup')} />
+                <input type="hidden" {...register('sgroup')} />
+                <input type="hidden" {...register('dgroup')} />
             </div>
 
             <hr className={isDarkMode ? 'border-gray-700' : 'border-gray-200'}/>

@@ -68,8 +68,9 @@ export const GoodsRegisterRouter = () => {
     const onInspect = async () => {
         const data = getValues();
         // [수정 1] representativeImageFile을 함께 가져옵니다.
-        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, representativeImageFile, imageFile, imageHtml } = data;
-        
+        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, representativeImageFile, imageFile, imageHtml, lgroup, mgroup, sgroup, dgroup } = data;
+
+
         // [수정 2] 대표 이미지가 있는지 먼저 확인합니다.
         if (!representativeImageFile || representativeImageFile.length === 0) {
             alert('AI 검수를 위해 대표 이미지를 먼저 등록해주세요.');
@@ -91,6 +92,10 @@ export const GoodsRegisterRouter = () => {
         formData.append('salesPrice', String(salesPrice));
         formData.append('buyPrice', String(buyPrice));
         formData.append('origin', origin);
+        formData.append('lgroup', lgroup);
+        formData.append('mgroup', mgroup);
+        formData.append('sgroup', sgroup);
+        formData.append('dgroup', dgroup);
         formData.append('isFileNew', 'true');
 
         // [수정 3] FormData에 대표 이미지 파일을 추가합니다.
@@ -142,7 +147,7 @@ export const GoodsRegisterRouter = () => {
             }
         }
 
-        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, representativeImageFile, imageFile, imageHtml } = data;
+        const { goodsName, mobileGoodsName, salesPrice, buyPrice, origin, representativeImageFile, imageFile, imageHtml, lgroup, mgroup, sgroup, dgroup } = data;
 
         const formData = new FormData();
         formData.append('goodsName', goodsName);
@@ -150,6 +155,10 @@ export const GoodsRegisterRouter = () => {
         formData.append('salesPrice', String(salesPrice));
         formData.append('buyPrice', String(buyPrice));
         formData.append('origin', origin);
+        formData.append('lgroup', lgroup);
+        formData.append('mgroup', mgroup);
+        formData.append('sgroup', sgroup);
+        formData.append('dgroup', dgroup);
         
         const aiCheckYn = inspectionResult ? 'Y' : 'N';
         formData.append('aiCheckYn', aiCheckYn);

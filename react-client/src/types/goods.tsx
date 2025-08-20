@@ -13,6 +13,14 @@ export interface Goods {
     representativeFile: FileInfo;
     // CommonEntity의 다른 필드 (insertId, modifiedAt, updateId)는 필요에 따라 추가
     // CommonEntity의 다른 필드 (insertId, modifiedAt, updateId)는 필요에 따라 추가
+    lgroup: string; // 대분류
+    lgroupName: string; // 대분류명
+    mgroup: string; // 중분류
+    mgroupName: string; // 중분류명
+    sgroup: string; // 소분류
+    sgroupName: string; // 소분류명
+    dgroup: string; // 세분류
+    dgroupName: string; // 세분류명
 }
 
 export interface FileInfo {

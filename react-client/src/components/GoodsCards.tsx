@@ -1,6 +1,5 @@
 import { Goods, FileInfo } from "../types/goods";
 
-
 export const GoodsCard = ({ goods, onEdit, isDarkMode }: { goods: Goods, onEdit: () => void, isDarkMode: boolean }) => {
     const proxyUrl = "/api";
 
@@ -12,49 +11,45 @@ export const GoodsCard = ({ goods, onEdit, isDarkMode }: { goods: Goods, onEdit:
             : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
     };
 
-    // 이미지 또는 HTML 콘텐츠를 렌더링하는 컴포넌트
+    // 이미지 또는 HTML 콘텐츠를 렌더링하는 컴포넌트 (변경 없음)
     const ImageRenderer = () => {
-        // 1. fileType이 '1'인 파일을 먼저 찾습니다.
-        let targetFile: FileInfo | undefined = goods.files?.find(file => file.fileType === '1');
+        let targetFile: FileInfo | undefined = goods.files?.find(file => file.fileType === '1' && file.representativeYn);
+        
+        if (!targetFile) {
+            targetFile = goods.files?.find(file => file.fileType === '1');
+        }
 
-        // 2. fileType이 '1'인 파일이 없으면, 배열의 첫 번째 파일을 사용합니다.
         if (!targetFile && goods.files?.length > 0) {
             targetFile = goods.files[0];
         }
 
-        // 3. 렌더링할 파일이 결정된 경우
         if (targetFile) {
-            // 3-1. filePath가 있는 경우: 일반 이미지 렌더링
             if (targetFile.filePath) {
                 const imageUrl = `${proxyUrl}${targetFile.filePath}`;
                 return (
                     <img
                         src={imageUrl}
                         alt={goods.goodsName}
-                        className="w-full h-52 object-cover transition-transform duration-300 group-hover:scale-110"
+                        className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                         onError={(e) => { e.currentTarget.src = `https://placehold.co/600x400/${isDarkMode ? '2D3748' : 'E2E8F0'}/${isDarkMode ? 'E2E8F0' : '4A5568'}?text=Image Error&font=sans`; }}
                     />
                 );
             }
-
-            // 3-2. fileName에 HTML 콘텐츠가 있는 경우: HTML 직접 렌더링
             if (targetFile.fileName) {
                 return (
                     <div
-                        className="w-full h-52 [&>img]:w-full [&>img]:h-full [&>img]:object-cover transition-transform duration-300 group-hover:[&>img]:scale-110"
+                        className="w-full h-48 [&>img]:w-full [&>img]:h-full [&>img]:object-cover transition-transform duration-300 group-hover:[&>img]:scale-105"
                         dangerouslySetInnerHTML={{ __html: targetFile.fileName }}
                     />
                 );
             }
         }
-
-        // 4. 표시할 파일이 전혀 없는 경우: 플레이스홀더 이미지 렌더링
         const placeholderUrl = `https://placehold.co/600x400/${isDarkMode ? '2D3748' : 'E2E8F0'}/${isDarkMode ? 'E2E8F0' : '4A5568'}?text=${encodeURI(goods.goodsName)}&font=sans`;
         return (
             <img
                 src={placeholderUrl}
                 alt={goods.goodsName}
-                className="w-full h-52 object-cover"
+                className="w-full h-48 object-cover"
             />
         );
     };
@@ -62,25 +57,46 @@ export const GoodsCard = ({ goods, onEdit, isDarkMode }: { goods: Goods, onEdit:
     return (
         <div
             onClick={onEdit}
-            className={`group cursor-pointer rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 ease-in-out ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}
+            className={`group flex flex-col cursor-pointer rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 ease-in-out overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}
         >
-            <div className="relative overflow-hidden rounded-t-2xl">
+            {/* === 1. 이미지 영역 === */}
+            <div className="relative overflow-hidden">
                 <ImageRenderer />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0"></div>
-                <h3 className="absolute bottom-4 left-4 text-white text-xl font-bold truncate pr-4">{goods.goodsName}</h3>
+                {/* 이미지 위 그라데이션 효과는 제거하여 깔끔하게 만듭니다. */}
             </div>
-            <div className="p-5">
-                <div className="flex justify-between items-center">
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {new Date(goods.insertAt).toLocaleDateString('ko-KR')} 등록
+
+            {/* === 2. 콘텐츠 영역: Flexbox Column으로 체계적인 레이아웃 구성 === */}
+            <div className="p-4 flex flex-col flex-grow">
+                
+                {/* 상단 정보 그룹 */}
+                <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <span>{goods.lgroupName}</span>
+                        {goods.mgroupName && <> &gt; <span>{goods.mgroupName}</span></>}
                     </p>
-                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${aiCheckBadge.className}`}>
-                        {aiCheckBadge.text}
-                    </span>
+                    <h3 className={`mt-1 text-base font-bold truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {goods.goodsName}
+                    </h3>
                 </div>
-                <p className={`mt-4 text-2xl font-extrabold text-right ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {goods.salesPrice.toLocaleString()}원
-                </p>
+
+                {/* 중간 공백 (이 div가 남은 공간을 모두 차지하여 가격을 아래로 밀어냅니다) */}
+                <div className="flex-grow" />
+
+                {/* 하단 가격 및 상태 그룹 */}
+                <div>
+                    <p className={`text-2xl font-extrabold text-right mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {goods.salesPrice.toLocaleString()}원
+                    </p>
+                    <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                        <span className={`font-semibold px-2 py-0.5 rounded-full ${aiCheckBadge.className}`}>
+                            {aiCheckBadge.text}
+                        </span>
+                        <span>
+                            {new Date(goods.insertAt).toLocaleDateString('ko-KR')} 등록
+                        </span>
+                    </div>
+                </div>
+
             </div>
         </div>
     );
